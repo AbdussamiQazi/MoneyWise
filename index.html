@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#090C18">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MoneyWise">
+<title>MoneyWise</title>
+<link rel="manifest" href='data:application/manifest+json,{"name":"MoneyWise – Expense Tracker","short_name":"MoneyWise","start_url":".","display":"standalone","background_color":"%23090C18","theme_color":"%23090C18","orientation":"portrait","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 viewBox%3D%270 0 512 512%27%3E%3Crect width%3D%27512%27 height%3D%27512%27 rx%3D%27100%27 fill%3D%27%23090C18%27%2F%3E%3Ctext x%3D%27256%27 y%3D%27340%27 text-anchor%3D%27middle%27 font-size%3D%27260%27%3E%F0%9F%92%B8%3C%2Ftext%3E%3C%2Fsvg%3E","sizes":"512x512","type":"image/svg+xml"}]}'>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27 viewBox%3D%270 0 512 512%27%3E%3Crect width%3D%27512%27 height%3D%27512%27 rx%3D%27100%27 fill%3D%27%23090C18%27%2F%3E%3Ctext x%3D%27256%27 y%3D%27340%27 text-anchor%3D%27middle%27 font-size%3D%27260%27%3E%F0%9F%92%B8%3C%2Ftext%3E%3C%2Fsvg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#090C18;--surface:#111525;--surface2:#192033;--border:#1E273D;
+  --accent:#F5A623;--accent-dim:rgba(245,166,35,.13);
+  --green:#34D399;--green-dim:rgba(52,211,153,.12);
+  --red:#F87171;--red-dim:rgba(248,113,113,.12);
+  --text:#E2E8F8;--text2:#7A8AAE;--text3:#3A4560;
+  --r:16px;--rs:10px;
+  --nav:68px;--sb:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;
+  width:100%;max-width:480px;margin:0 auto;
+  display:flex;flex-direction:column;
+}
+#app{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;}
+
+/* ── SCROLL WRAPPER ── */
+#pages{flex:1;overflow:hidden;position:relative;}
+.page{
+  position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:0 18px;padding-bottom:calc(var(--nav) + var(--sb) + 24px);
+  opacity:0;pointer-events:none;transform:translateY(8px);
+  transition:opacity .22s ease,transform .22s ease;
+}
+.page.active{opacity:1;pointer-events:all;transform:translateY(0);}
+
+/* ── HEADER ── */
+.hdr{
+  padding:calc(env(safe-area-inset-top,20px) + 16px) 18px 14px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg);position:sticky;top:0;z-index:50;
+}
+.hdr-title{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;letter-spacing:-.5px;}
+.hdr-title span{color:var(--accent);}
+.hdr-sub{font-size:12px;color:var(--text2);font-weight:500;}
+
+/* ── BOTTOM NAV ── */
+.nav{
+  background:var(--surface);border-top:1px solid var(--border);
+  display:flex;align-items:stretch;
+  padding-bottom:var(--sb);
+  height:calc(var(--nav) + var(--sb));
+  flex-shrink:0;position:relative;z-index:100;
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;cursor:pointer;
+  color:var(--text3);transition:color .18s;padding:10px 0;
+  border:none;background:transparent;font-family:inherit;
+}
+.nav-item.active{color:var(--accent);}
+.nav-item svg{width:22px;height:22px;stroke-width:1.8;}
+.nav-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;}
+.nav-add{
+  flex:1.2;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;cursor:pointer;border:none;background:transparent;
+  font-family:inherit;
+}
+.nav-add-btn{
+  width:50px;height:50px;background:var(--accent);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(245,166,35,.35);
+  transition:transform .15s,box-shadow .15s;
+  margin-bottom:2px;
+}
+.nav-add-btn svg{width:22px;height:22px;stroke:#090C18;stroke-width:2.5;}
+.nav-add.active .nav-add-btn{transform:scale(.93);box-shadow:0 2px 10px rgba(245,166,35,.2);}
+.nav-add-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);}
+.nav-add.active .nav-add-label{color:var(--accent);}
+
+/* ── CARDS ── */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:16px;margin-bottom:12px;
+}
+.section-title{
+  font-family:'Syne',sans-serif;font-weight:700;font-size:15px;
+  margin-bottom:12px;color:var(--text);
+}
+
+/* ── SUMMARY GRID ── */
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.sum-card{
+  border-radius:var(--r);padding:16px;
+  background:var(--surface);border:1px solid var(--border);
+}
+.sum-card.income{border-color:rgba(52,211,153,.25);background:linear-gradient(135deg,var(--surface),rgba(52,211,153,.06));}
+.sum-card.expense{border-color:rgba(248,113,113,.25);background:linear-gradient(135deg,var(--surface),rgba(248,113,113,.06));}
+.sum-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;}
+.sum-amount{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;line-height:1;}
+.sum-count{font-size:11px;color:var(--text3);margin-top:5px;}
+
+/* ── BALANCE DISPLAY ── */
+.balance-card{
+  text-align:center;padding:22px 16px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);margin-bottom:12px;
+  position:relative;overflow:hidden;
+}
+.balance-card::before{
+  content:'';position:absolute;top:-40px;left:50%;transform:translateX(-50%);
+  width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle,rgba(245,166,35,.07) 0%,transparent 70%);
+  pointer-events:none;
+}
+.balance-lbl{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;}
+.balance-amt{font-family:'Syne',sans-serif;font-size:38px;font-weight:800;line-height:1;}
+
+/* ── MONTH NAV ── */
+.month-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.month-btn{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;width:34px;height:34px;font-size:18px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.month-lbl{flex:1;text-align:center;font-family:'Syne',sans-serif;font-weight:700;font-size:16px;}
+
+/* ── CATEGORY BARS ── */
+.cat-bar{margin-bottom:10px;}
+.cat-bar-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:13px;}
+.cat-bar-name{display:flex;align-items:center;gap:6px;font-weight:500;}
+.cat-bar-val{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;}
+.cat-bar-pct{color:var(--text3);font-size:11px;margin-left:4px;}
+.cat-track{height:4px;background:var(--surface2);border-radius:99px;overflow:hidden;}
+.cat-fill{height:100%;border-radius:99px;transition:width .7s cubic-bezier(.4,0,.2,1);}
+
+/* ── TXN ITEMS ── */
+.txn-item{
+  display:flex;align-items:center;gap:12px;
+  padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;
+  transition:background .15s;
+}
+.txn-item:last-child{border-bottom:none;}
+.txn-ico{
+  width:40px;height:40px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+}
+.txn-body{flex:1;min-width:0;}
+.txn-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.txn-sub{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.txn-right{text-align:right;flex-shrink:0;}
+.txn-amt{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;}
+.txn-date{font-size:11px;color:var(--text3);margin-top:2px;}
+.txn-expand{
+  padding:10px 12px 12px;background:var(--surface2);
+  border-radius:0 0 10px 10px;margin-bottom:8px;
+  display:none;animation:slideDown .18s ease;
+}
+.txn-expand.open{display:block;}
+@keyframes slideDown{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.expand-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+.expand-info{flex:1;font-size:13px;color:var(--text2);line-height:1.6;}
+.expand-info strong{color:var(--text);}
+
+/* ── DATE GROUP ── */
+.dg-hdr{
+  font-size:11px;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:1px;
+  padding:14px 0 6px;
+}
+
+/* ── TOGGLE BAR ── */
+.toggle-bar{
+  display:flex;background:var(--surface2);border-radius:var(--rs);
+  padding:4px;margin-bottom:18px;gap:2px;
+}
+.tgl-btn{
+  flex:1;padding:9px;border-radius:7px;border:none;
+  background:transparent;color:var(--text2);
+  font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .18s;
+}
+.tgl-btn.active{background:var(--accent);color:#090C18;}
+.tgl-btn.active.income-active{background:var(--green);color:#090C18;}
+
+/* ── CATEGORY GRID ── */
+.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 16px;}
+.cat-pill{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:9px 4px;border-radius:11px;border:2px solid transparent;
+  cursor:pointer;transition:all .18s;background:var(--surface2);
+}
+.cat-pill.sel{border-color:var(--accent);background:var(--accent-dim);}
+.cat-pill-ico{font-size:20px;}
+.cat-pill-lbl{font-size:9px;font-weight:600;text-align:center;color:var(--text2);line-height:1.2;}
+.cat-pill.sel .cat-pill-lbl{color:var(--accent);}
+
+/* ── INPUTS ── */
+.inp-group{margin-bottom:14px;}
+.inp-lbl{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;display:block;}
+.inp{
+  width:100%;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:var(--rs);color:var(--text);font-family:inherit;
+  font-size:15px;padding:12px 14px;outline:none;transition:border-color .18s;
+  appearance:none;-webkit-appearance:none;
+}
+.inp:focus{border-color:var(--accent);}
+.inp.income:focus{border-color:var(--green);}
+.inp-amt{font-size:28px;font-weight:700;font-family:'Syne',sans-serif;text-align:center;padding:14px;}
+.inp-prefix{position:relative;}
+.inp-prefix::before{content:'₹';position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text2);font-size:15px;pointer-events:none;z-index:1;}
+.inp-prefix .inp{padding-left:28px;}
+
+/* ── BUTTONS ── */
+.btn{
+  width:100%;border:none;border-radius:var(--rs);padding:14px;
+  font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;
+  transition:opacity .15s,transform .1s;letter-spacing:.2px;
+}
+.btn:active{opacity:.85;transform:scale(.98);}
+.btn-primary{background:var(--accent);color:#090C18;}
+.btn-income{background:var(--green);color:#090C18;}
+.btn-ghost{
+  background:var(--surface2);color:var(--text);
+  border:1.5px solid var(--border);
+}
+.btn-danger{
+  background:var(--red-dim);color:var(--red);
+  border:1.5px solid rgba(248,113,113,.25);
+}
+.btn-del-sm{
+  background:var(--red-dim);color:var(--red);
+  border:1px solid rgba(248,113,113,.3);
+  padding:5px 11px;border-radius:6px;font-size:11px;
+  font-weight:700;cursor:pointer;font-family:inherit;
+  white-space:nowrap;
+}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 20px;color:var(--text3);}
+.empty-ico{font-size:48px;margin-bottom:12px;}
+.empty-txt{font-size:14px;}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:calc(var(--nav) + var(--sb) + 12px);
+  left:50%;transform:translateX(-50%) translateY(12px);
+  background:var(--surface2);color:var(--text);
+  padding:9px 20px;border-radius:99px;font-size:13px;font-weight:600;
+  border:1px solid var(--border);opacity:0;transition:all .25s;
+  z-index:1000;white-space:nowrap;pointer-events:none;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── STAT ROW ── */
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:14px;}
+.stat-row+.stat-row{border-top:1px solid var(--border);}
+.stat-row .val{font-family:'Syne',sans-serif;font-weight:700;}
+
+/* ── HISTORY FILTER ── */
+.hist-filter{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;}
+.hist-chip{
+  flex-shrink:0;padding:6px 14px;border-radius:99px;font-size:12px;
+  font-weight:600;cursor:pointer;border:1.5px solid var(--border);
+  background:var(--surface2);color:var(--text2);transition:all .18s;
+}
+.hist-chip.active{border-color:var(--accent);background:var(--accent-dim);color:var(--accent);}
+
+/* ── DATA PAGE ── */
+.data-stat{
+  display:flex;flex-direction:column;gap:6px;padding:14px 0;
+  border-bottom:1px solid var(--border);
+}
+.data-stat:last-child{border-bottom:none;}
+.data-stat-lbl{font-size:12px;color:var(--text2);}
+.data-stat-val{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;}
+
+/* ── SCROLLBAR HIDDEN ── */
+.page::-webkit-scrollbar{display:none;}
+.page{-ms-overflow-style:none;scrollbar-width:none;}
+
+/* ── MONTH CHIP ── */
+.month-chip{
+  display:inline-block;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text2);padding:3px 10px;border-radius:6px;font-size:11px;
+  font-weight:600;margin-bottom:10px;
+}
+
+/* ── REVENUE CHIP ── */
+.rev-chip{
+  display:inline-block;background:var(--green-dim);color:var(--green);
+  padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;
+  letter-spacing:.3px;text-transform:uppercase;
+}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--border);margin:4px 0 12px;}
+
+/* ── INSTALL BANNER ── */
+#install-banner{
+  display:none;
+  background:var(--accent-dim);border:1px solid rgba(245,166,35,.25);
+  border-radius:var(--rs);padding:12px 14px;margin-bottom:12px;
+  font-size:13px;color:var(--text2);
+}
+#install-banner strong{color:var(--accent);}
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== DASHBOARD PAGE ===== -->
+  <div id="page-dashboard" class="page active">
+    <div class="hdr">
+      <div>
+        <div class="hdr-title">MoneyWise<span>.</span></div>
+        <div class="hdr-sub">Track every rupee</div>
+      </div>
+    </div>
+    <div id="dash-body"></div>
+  </div>
+
+  <!-- ===== ADD PAGE ===== -->
+  <div id="page-add" class="page">
+    <div class="hdr">
+      <div class="hdr-title">Add</div>
+    </div>
+    <div id="add-body"></div>
+  </div>
+
+  <!-- ===== HISTORY PAGE ===== -->
+  <div id="page-history" class="page">
+    <div class="hdr">
+      <div class="hdr-title">History</div>
+    </div>
+    <div id="hist-body"></div>
+  </div>
+
+  <!-- ===== DATA PAGE ===== -->
+  <div id="page-data" class="page">
+    <div class="hdr">
+      <div class="hdr-title">Data</div>
+    </div>
+    <div id="data-body"></div>
+  </div>
+
+  <!-- ===== BOTTOM NAV ===== -->
+  <nav class="nav">
+    <button class="nav-item active" id="nav-dashboard" onclick="navigate('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" id="nav-history" onclick="navigate('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      <span class="nav-label">History</span>
+    </button>
+    <button class="nav-add" id="nav-add" onclick="navigate('add')">
+      <div class="nav-add-btn">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor"/></svg>
+      </div>
+      <span class="nav-add-label">Add</span>
+    </button>
+    <button class="nav-item" id="nav-data" onclick="navigate('data')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="nav-label">Export</span>
+    </button>
+  </nav>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//   CONSTANTS
+// ══════════════════════════════════════════
+const CATS = {
+  food:          {label:'Food & Dining',    icon:'🍽️', color:'#FF8C42'},
+  transport:     {label:'Transport',        icon:'🚇',  color:'#4A9EFF'},
+  shopping:      {label:'Shopping',         icon:'🛒',  color:'#B47FFF'},
+  bills:         {label:'Bills & Utilities',icon:'⚡',  color:'#FFD166'},
+  entertainment: {label:'Entertainment',    icon:'🎭',  color:'#FF6B9D'},
+  health:        {label:'Health',           icon:'💊',  color:'#2DD4BF'},
+  education:     {label:'Education',        icon:'📚',  color:'#60A5FA'},
+  housing:       {label:'Housing & Rent',   icon:'🏠',  color:'#6EE7B7'},
+  travel:        {label:'Travel',           icon:'✈️',  color:'#FBA4C0'},
+  other:         {label:'Other',            icon:'💸',  color:'#94A3B8'},
+};
+const CAT_KEYS = Object.keys(CATS);
+
+// ══════════════════════════════════════════
+//   STATE
+// ══════════════════════════════════════════
+let D = {expenses:[], revenue:[]};
+let curPage   = 'dashboard';
+let addMode   = 'expense';
+let selCat    = 'food';
+let curMonth  = todayStr().slice(0,7);
+let histFilt  = 'all';
+
+// ══════════════════════════════════════════
+//   STORAGE
+// ══════════════════════════════════════════
+function loadData(){
+  try{ const s=localStorage.getItem('MoneyWise_v2'); if(s) D=JSON.parse(s); }catch(e){}
+}
+function saveData(){
+  localStorage.setItem('MoneyWise_v2', JSON.stringify(D));
+}
+
+// ══════════════════════════════════════════
+//   HELPERS
+// ══════════════════════════════════════════
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+function todayStr(){
+  const d=new Date();
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+
+function pad(n){ return String(n).padStart(2,'0'); }
+
+function fmtCur(n){
+  return '₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function fmtDate(s){
+  const d=new Date(s+'T00:00:00');
+  return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+}
+
+function monthLabel(mk){
+  const [y,m]=mk.split('-');
+  return new Date(y,m-1).toLocaleString('en-IN',{month:'long',year:'numeric'});
+}
+
+function dateGroupLabel(s){
+  const d=new Date(s+'T00:00:00');
+  const t=new Date(); t.setHours(0,0,0,0);
+  const y=new Date(t); y.setDate(y.getDate()-1);
+  if(d.getTime()===t.getTime()) return 'Today';
+  if(d.getTime()===y.getTime()) return 'Yesterday';
+  return d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+}
+
+function monthData(mk){
+  return {
+    expenses: D.expenses.filter(e=>e.date.startsWith(mk)),
+    revenue:  D.revenue.filter(r=>r.date.startsWith(mk)),
+  };
+}
+
+// ══════════════════════════════════════════
+//   NAVIGATION
+// ══════════════════════════════════════════
+function navigate(page){
+  // remove active from old
+  const old=document.getElementById('page-'+curPage);
+  if(old) old.classList.remove('active');
+  ['dashboard','history','data'].forEach(p=>{
+    const ni=document.getElementById('nav-'+p);
+    if(ni) ni.classList.remove('active');
+  });
+  document.getElementById('nav-add')?.classList.remove('active');
+
+  curPage=page;
+
+  const pg=document.getElementById('page-'+page);
+  if(pg) pg.classList.add('active');
+
+  if(page==='add') document.getElementById('nav-add')?.classList.add('active');
+  else{
+    const ni=document.getElementById('nav-'+page);
+    if(ni) ni.classList.add('active');
+  }
+
+  renderPage(page);
+}
+
+function renderPage(page){
+  if(page==='dashboard') renderDash();
+  else if(page==='add')  renderAdd();
+  else if(page==='history') renderHistory();
+  else if(page==='data') renderData();
+}
+
+// ══════════════════════════════════════════
+//   DASHBOARD
+// ══════════════════════════════════════════
+function renderDash(){
+  const {expenses,revenue}=monthData(curMonth);
+  const totExp = expenses.reduce((s,e)=>s+e.amount,0);
+  const totRev = revenue.reduce((s,r)=>s+r.amount,0);
+  const net    = totRev - totExp;
+
+  // Category breakdown
+  const byCat={};
+  expenses.forEach(e=>{
+    byCat[e.category]=(byCat[e.category]||0)+e.amount;
+  });
+  const catArr=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const maxAmt=catArr[0]?.[1]||1;
+
+  // Recent 5
+  const recent=[
+    ...expenses.map(e=>({...e,_t:'exp'})),
+    ...revenue.map(r=>({...r,_t:'rev'})),
+  ].sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id)).slice(0,5);
+
+  const netColor = net>=0?'var(--green)':'var(--red)';
+
+  document.getElementById('dash-body').innerHTML=`
+    <div class="month-nav">
+      <button class="month-btn" onclick="chMonth(-1)">‹</button>
+      <div class="month-lbl">${monthLabel(curMonth)}</div>
+      <button class="month-btn" onclick="chMonth(1)">›</button>
+    </div>
+
+    <div class="balance-card">
+      <div class="balance-lbl">Net Balance</div>
+      <div class="balance-amt" style="color:${netColor}">${fmtCur(net)}</div>
+    </div>
+
+    <div class="sum-grid">
+      <div class="sum-card income">
+        <div class="sum-label" style="color:var(--green)">Income</div>
+        <div class="sum-amount" style="color:var(--green)">${fmtCur(totRev)}</div>
+        <div class="sum-count">${revenue.length} entr${revenue.length===1?'y':'ies'}</div>
+      </div>
+      <div class="sum-card expense">
+        <div class="sum-label" style="color:var(--red)">Spent</div>
+        <div class="sum-amount" style="color:var(--red)">${fmtCur(totExp)}</div>
+        <div class="sum-count">${expenses.length} entr${expenses.length===1?'y':'ies'}</div>
+      </div>
+    </div>
+
+    ${catArr.length?`
+    <div class="card">
+      <div class="section-title">Spending by Category</div>
+      ${catArr.map(([cat,amt])=>{
+        const c=CATS[cat]||CATS.other;
+        const pct=totExp?Math.round(amt/totExp*100):0;
+        return `<div class="cat-bar">
+          <div class="cat-bar-top">
+            <span class="cat-bar-name">${c.icon} ${c.label}</span>
+            <span class="cat-bar-val">${fmtCur(amt)}<span class="cat-bar-pct">${pct}%</span></span>
+          </div>
+          <div class="cat-track"><div class="cat-fill" style="width:${amt/maxAmt*100}%;background:${c.color}"></div></div>
+        </div>`;
+      }).join('')}
+    </div>`:''
+    }
+
+    <div class="section-title">Recent Transactions</div>
+    ${recent.length===0
+      ?`<div class="empty"><div class="empty-ico">💸</div><div class="empty-txt">No transactions this month.<br>Tap <strong>+</strong> to add one.</div></div>`
+      :`<div class="card" style="padding:0 14px">${recent.map(t=>txnRow(t,false)).join('')}</div>`
+    }
+  `;
+}
+
+function chMonth(d){
+  const [y,m]=curMonth.split('-').map(Number);
+  const nd=new Date(y,m-1+d);
+  curMonth=nd.getFullYear()+'-'+pad(nd.getMonth()+1);
+  renderDash();
+}
+
+// ══════════════════════════════════════════
+//   ADD PAGE
+// ══════════════════════════════════════════
+function renderAdd(){
+  document.getElementById('add-body').innerHTML=`
+    <div class="toggle-bar">
+      <button class="tgl-btn ${addMode==='expense'?'active':''}" onclick="setMode('expense')">🔴  Expense</button>
+      <button class="tgl-btn ${addMode==='revenue'?'active income-active':''}" onclick="setMode('revenue')">🟢  Income</button>
+    </div>
+    ${addMode==='expense'?expForm():revForm()}
+  `;
+}
+
+function expForm(){
+  return `
+    <div class="inp-group">
+      <label class="inp-lbl">Category</label>
+      <div class="cat-grid">
+        ${CAT_KEYS.map(k=>`
+          <div class="cat-pill ${selCat===k?'sel':''}" onclick="selCategory('${k}')">
+            <span class="cat-pill-ico">${CATS[k].icon}</span>
+            <span class="cat-pill-lbl">${CATS[k].label}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="inp-group">
+      <label class="inp-lbl">Detail / Description</label>
+      <input class="inp" id="e-detail" placeholder="e.g. McDonald's, Ola ride, Zomato..." autocomplete="off">
+    </div>
+    <div class="inp-group">
+      <label class="inp-lbl">Date</label>
+      <input class="inp" id="e-date" type="date" value="${todayStr()}">
+    </div>
+    <div class="inp-group">
+      <label class="inp-lbl">Amount</label>
+      <div class="inp-prefix"><input class="inp inp-amt" id="e-amount" type="number" inputmode="decimal" placeholder="0" min="0" step="any"></div>
+    </div>
+    <button class="btn btn-primary" onclick="submitExp()">Add Expense</button>
+  `;
+}
+
+function revForm(){
+  return `
+    <div class="inp-group">
+      <label class="inp-lbl">Source</label>
+      <input class="inp income" id="r-source" placeholder="e.g. Salary, Freelance, Gift..." autocomplete="off">
+    </div>
+    <div class="inp-group">
+      <label class="inp-lbl">Detail / Description</label>
+      <input class="inp income" id="r-detail" placeholder="e.g. May 2026 salary, Project payment..." autocomplete="off">
+    </div>
+    <div class="inp-group">
+      <label class="inp-lbl">Date</label>
+      <input class="inp income" id="r-date" type="date" value="${todayStr()}">
+    </div>
+    <div class="inp-group">
+      <label class="inp-lbl">Amount</label>
+      <div class="inp-prefix"><input class="inp inp-amt income" id="r-amount" type="number" inputmode="decimal" placeholder="0" min="0" step="any"></div>
+    </div>
+    <button class="btn btn-income" onclick="submitRev()">Add Income</button>
+  `;
+}
+
+function setMode(m){ addMode=m; renderAdd(); }
+function selCategory(k){ selCat=k; renderAdd(); }
+
+function submitExp(){
+  const detail = document.getElementById('e-detail').value.trim();
+  const date   = document.getElementById('e-date').value;
+  const amt    = parseFloat(document.getElementById('e-amount').value);
+  if(!date){ toast('Enter a date'); return; }
+  if(!amt||amt<=0){ toast('Enter a valid amount'); return; }
+  D.expenses.push({id:uid(),category:selCat,detail,date,amount:amt});
+  saveData();
+  toast('Expense added ✓');
+  navigate('dashboard');
+}
+
+function submitRev(){
+  const source = document.getElementById('r-source').value.trim();
+  const detail = document.getElementById('r-detail').value.trim();
+  const date   = document.getElementById('r-date').value;
+  const amt    = parseFloat(document.getElementById('r-amount').value);
+  if(!source){ toast('Enter a source'); return; }
+  if(!date){ toast('Enter a date'); return; }
+  if(!amt||amt<=0){ toast('Enter a valid amount'); return; }
+  D.revenue.push({id:uid(),source,detail,date,amount:amt});
+  saveData();
+  toast('Income added ✓');
+  navigate('dashboard');
+}
+
+// ══════════════════════════════════════════
+//   HISTORY
+// ══════════════════════════════════════════
+function renderHistory(){
+  let items=[];
+  if(histFilt!=='revenue') items.push(...D.expenses.map(e=>({...e,_t:'exp'})));
+  if(histFilt!=='expense') items.push(...D.revenue.map(r=>({...r,_t:'rev'})));
+  items.sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
+
+  const byDate={};
+  items.forEach(it=>{ (byDate[it.date]=byDate[it.date]||[]).push(it); });
+  const dates=Object.keys(byDate).sort().reverse();
+
+  document.getElementById('hist-body').innerHTML=`
+    <div class="hist-filter">
+      <div class="hist-chip ${histFilt==='all'?'active':''}" onclick="setFilt('all')">All</div>
+      <div class="hist-chip ${histFilt==='expense'?'active':''}" onclick="setFilt('expense')">Expenses</div>
+      <div class="hist-chip ${histFilt==='revenue'?'active':''}" onclick="setFilt('revenue')">Income</div>
+    </div>
+    ${dates.length===0
+      ?`<div class="empty"><div class="empty-ico">📋</div><div class="empty-txt">No transactions yet.</div></div>`
+      :dates.map(dt=>`
+        <div class="dg-hdr">${dateGroupLabel(dt)}</div>
+        <div class="card" style="padding:0 14px 2px">
+          ${byDate[dt].map(t=>txnRow(t,true)).join('')}
+        </div>`).join('')
+    }
+  `;
+}
+
+function setFilt(f){ histFilt=f; renderHistory(); }
+
+// ══════════════════════════════════════════
+//   SHARED TXN ROW
+// ══════════════════════════════════════════
+function txnRow(t,expandable){
+  const isExp = t._t==='exp';
+  const cat   = isExp?CATS[t.category]||CATS.other:null;
+  const ico   = isExp?cat.icon:'💰';
+  const col   = isExp?cat.color:'var(--green)';
+  const name  = isExp?cat.label:t.source||'Income';
+  const sub   = t.detail||'';
+  const sign  = isExp?'-':'+';
+  const amtC  = isExp?'var(--red)':'var(--green)';
+  const id    = t.id;
+
+  if(!expandable){
+    return `<div class="txn-item" style="cursor:default">
+      <div class="txn-ico" style="background:${col}22">${ico}</div>
+      <div class="txn-body">
+        <div class="txn-name">${esc(name)}</div>
+        ${sub?`<div class="txn-sub">${esc(sub)}</div>`:''}
+      </div>
+      <div class="txn-right">
+        <div class="txn-amt" style="color:${amtC}">${sign}${fmtCur(t.amount)}</div>
+        <div class="txn-date">${fmtDate(t.date)}</div>
+      </div>
+    </div>`;
+  }
+
+  return `
+    <div class="txn-item" onclick="toggleExpand('${id}')">
+      <div class="txn-ico" style="background:${col}22">${ico}</div>
+      <div class="txn-body">
+        <div class="txn-name">${esc(name)}</div>
+        ${sub?`<div class="txn-sub">${esc(sub)}</div>`:''}
+      </div>
+      <div class="txn-right">
+        <div class="txn-amt" style="color:${amtC}">${sign}${fmtCur(t.amount)}</div>
+        <div class="txn-date">${fmtDate(t.date)}</div>
+      </div>
+    </div>
+    <div id="ex-${id}" class="txn-expand">
+      <div class="expand-row">
+        <div class="expand-info">
+          <div><strong>Date:</strong> ${fmtDate(t.date)}</div>
+          ${sub?`<div><strong>Detail:</strong> ${esc(sub)}</div>`:''}
+          ${isExp?`<div><strong>Category:</strong> ${cat.label}</div>`:`<div><strong>Source:</strong> ${esc(t.source||'')}</div>`}
+          <div><strong>Amount:</strong> ${sign}${fmtCur(t.amount)}</div>
+        </div>
+        <button class="btn-del-sm" onclick="event.stopPropagation();delEntry('${id}','${t._t}')">Delete</button>
+      </div>
+    </div>
+  `;
+}
+
+function toggleExpand(id){
+  const el=document.getElementById('ex-'+id);
+  if(el) el.classList.toggle('open');
+}
+
+function delEntry(id,type){
+  if(!confirm('Delete this entry?')) return;
+  if(type==='exp') D.expenses=D.expenses.filter(e=>e.id!==id);
+  else D.revenue=D.revenue.filter(r=>r.id!==id);
+  saveData();
+  renderHistory();
+  toast('Deleted');
+}
+
+// ══════════════════════════════════════════
+//   DATA PAGE
+// ══════════════════════════════════════════
+function renderData(){
+  const totE=D.expenses.reduce((s,e)=>s+e.amount,0);
+  const totR=D.revenue.reduce((s,r)=>s+r.amount,0);
+  const net=totR-totE;
+
+  // Monthly breakdown
+  const months=new Set([...D.expenses.map(e=>e.date.slice(0,7)),...D.revenue.map(r=>r.date.slice(0,7))]);
+  const mArr=[...months].sort().reverse().slice(0,6);
+
+  document.getElementById('data-body').innerHTML=`
+
+    <div class="card">
+      <div class="section-title">All-Time Summary</div>
+      <div class="stat-row"><span style="color:var(--text2)">Total Income</span><span class="val" style="color:var(--green)">${fmtCur(totR)}</span></div>
+      <div class="stat-row"><span style="color:var(--text2)">Total Expenses</span><span class="val" style="color:var(--red)">${fmtCur(totE)}</span></div>
+      <div class="stat-row"><span style="font-weight:700">Net Balance</span><span class="val" style="color:${net>=0?'var(--green)':'var(--red)'}">${fmtCur(net)}</span></div>
+    </div>
+
+    ${mArr.length?`
+    <div class="card">
+      <div class="section-title">Monthly Breakdown</div>
+      ${mArr.map(mk=>{
+        const {expenses:me,revenue:mr}=monthData(mk);
+        const me_tot=me.reduce((s,e)=>s+e.amount,0);
+        const mr_tot=mr.reduce((s,r)=>s+r.amount,0);
+        const mn=mr_tot-me_tot;
+        return `<div class="stat-row" style="flex-direction:column;align-items:flex-start;padding:10px 0;gap:4px">
+          <div style="font-weight:700;font-size:14px">${monthLabel(mk)}</div>
+          <div style="display:flex;gap:14px;font-size:13px">
+            <span style="color:var(--green)">+${fmtCur(mr_tot)}</span>
+            <span style="color:var(--red)">-${fmtCur(me_tot)}</span>
+            <span style="color:${mn>=0?'var(--green)':'var(--red)'}">= ${fmtCur(mn)}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`:''
+    }
+
+    <div class="card">
+      <div class="section-title">Export to Excel</div>
+      <div style="color:var(--text2);font-size:13px;margin-bottom:14px;line-height:1.6">
+        Exports all data into one Excel file — each month gets its own sheet, expenses grouped by category with subtotals.
+      </div>
+      <button class="btn btn-primary" onclick="exportExcel()">
+        <span style="margin-right:6px">📥</span> Export MoneyWise Data
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Import from Excel</div>
+      <div style="color:var(--text2);font-size:13px;margin-bottom:14px;line-height:1.6">
+        Restore your data from a previously exported file. Duplicates are skipped automatically.
+      </div>
+      <input type="file" id="imp-file" accept=".xlsx,.xls" style="display:none" onchange="handleImport(this)">
+      <button class="btn btn-ghost" onclick="document.getElementById('imp-file').click()">
+        <span style="margin-right:6px">📤</span> Import Excel File
+      </button>
+    </div>
+
+    <div class="card" style="border-color:rgba(248,113,113,.2)">
+      <div class="section-title" style="color:var(--red)">Danger Zone</div>
+      <div style="color:var(--text2);font-size:13px;margin-bottom:14px">Clear all data from this device. Cannot be undone.</div>
+      <button class="btn btn-danger" onclick="clearAll()">🗑️  Clear All Data</button>
+    </div>
+
+    <div style="text-align:center;color:var(--text3);font-size:12px;padding:12px 0 4px">
+      ${D.expenses.length} expenses · ${D.revenue.length} income entries
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════
+//   EXPORT
+// ══════════════════════════════════════════
+function exportExcel(){
+  if(!window.XLSX){ toast('Excel library not loaded'); return; }
+
+  const wb=XLSX.utils.book_new();
+  const allMonths=new Set([
+    ...D.expenses.map(e=>e.date.slice(0,7)),
+    ...D.revenue.map(r=>r.date.slice(0,7)),
+  ]);
+
+  if(!allMonths.size){ toast('No data to export'); return; }
+
+  [...allMonths].sort().forEach(mk=>{
+    const {expenses,revenue}=monthData(mk);
+    const rows=[];
+
+    // ─── EXPENSES ───
+    rows.push(['EXPENSES','','','']);
+    rows.push(['Type','Detail','Date','Amount (₹)']);
+
+    const byCat={};
+    expenses.forEach(e=>{ (byCat[e.category]=byCat[e.category]||[]).push(e); });
+
+    let totE=0;
+    Object.entries(byCat).sort().forEach(([cat,items])=>{
+      const lbl=CATS[cat]?.label||cat;
+      items.sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>{
+        rows.push([lbl, e.detail||'', fmtDate(e.date), e.amount]);
+      });
+      const sub=items.reduce((s,e)=>s+e.amount,0);
+      totE+=sub;
+      rows.push([lbl+' Total','','',sub]);
+      rows.push(['','','','']);
+    });
+
+    rows.push(['MONTHLY EXPENSES TOTAL','','',totE]);
+    rows.push(['','','','']);
+    rows.push(['','','','']);
+
+    // ─── REVENUE ───
+    rows.push(['REVENUE','','','']);
+    rows.push(['Source','Detail','Date','Amount (₹)']);
+
+    let totR=0;
+    revenue.sort((a,b)=>a.date.localeCompare(b.date)).forEach(r=>{
+      rows.push([r.source||'', r.detail||'', fmtDate(r.date), r.amount]);
+      totR+=r.amount;
+    });
+
+    rows.push(['REVENUE TOTAL','','',totR]);
+    rows.push(['','','','']);
+    rows.push(['NET BALANCE (Revenue − Expenses)','','',totR-totE]);
+
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:26},{wch:36},{wch:16},{wch:16}];
+
+    const [y,m]=mk.split('-');
+    const sname=new Date(+y,m-1).toLocaleString('en',{month:'short'})+' '+y;
+    XLSX.utils.book_append_sheet(wb,ws,sname);
+  });
+
+  XLSX.writeFile(wb,'MoneyWise_expenses.xlsx');
+  toast('Exported ✓');
+}
+
+// ══════════════════════════════════════════
+//   IMPORT
+// ══════════════════════════════════════════
+function handleImport(inp){
+  if(!inp.files[0]) return;
+  const file=inp.files[0];
+  inp.value='';
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=new Uint8Array(ev.target.result);
+      const wb=XLSX.read(data,{type:'array',raw:true});
+      let addedE=0, addedR=0;
+
+      wb.SheetNames.forEach(sname=>{
+        const ws=wb.Sheets[sname];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+
+        let inRev=false;
+
+        rows.forEach(row=>{
+          const c0=String(row[0]||'').trim();
+          const c1=String(row[1]||'').trim();
+          const c2=String(row[2]||'').trim();
+          const c3=row[3];
+          const amt=typeof c3==='number'?c3:parseFloat(c3);
+
+          if(!c0) return;
+
+          // Section markers / headers / totals → skip
+          if(c0==='EXPENSES'||c0==='Type'||c0==='Source') return;
+          if(c0==='REVENUE'){ inRev=true; return; }
+          if(c0.endsWith(' Total')||c0==='MONTHLY EXPENSES TOTAL'||
+             c0==='REVENUE TOTAL'||c0.startsWith('NET BALANCE')) return;
+          if(isNaN(amt)||amt<=0) return;
+
+          const date=parseImportDate(c2)||todayStr();
+
+          if(inRev){
+            const dup=D.revenue.some(r=>r.source===c0&&r.detail===c1&&r.date===date&&r.amount===amt);
+            if(!dup){ D.revenue.push({id:uid(),source:c0,detail:c1,date,amount:amt}); addedR++; }
+          } else {
+            // Find category key from label
+            let catKey='other';
+            for(const [k,v] of Object.entries(CATS)){
+              if(v.label===c0||k===c0.toLowerCase()){ catKey=k; break; }
+            }
+            const dup=D.expenses.some(e=>e.category===catKey&&e.detail===c1&&e.date===date&&e.amount===amt);
+            if(!dup){ D.expenses.push({id:uid(),category:catKey,detail:c1,date,amount:amt}); addedE++; }
+          }
+        });
+      });
+
+      saveData();
+      toast(`Imported ${addedE} expenses, ${addedR} income`);
+      renderPage(curPage);
+    } catch(err){
+      toast('Import failed: '+err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseImportDate(str){
+  if(!str) return null;
+  str=String(str).trim();
+  if(!str) return null;
+
+  // ISO: 2026-05-09
+  if(/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+
+  // "09 May 2026" or "9 May 2026"
+  const MONTHS=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const m=str.match(/(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/);
+  if(m){
+    const mi=MONTHS.findIndex(mo=>m[2].toLowerCase().startsWith(mo));
+    if(mi!==-1) return `${m[3]}-${pad(mi+1)}-${pad(m[1])}`;
+  }
+
+  // Excel serial number (days since 1899-12-30)
+  const serial=Number(str);
+  if(!isNaN(serial)&&serial>30000){
+    const d=new Date(Math.round((serial-25569)*86400*1000));
+    return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());
+  }
+
+  // Native fallback
+  const d=new Date(str);
+  if(!isNaN(d.getTime())) return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+
+  return null;
+}
+
+// ══════════════════════════════════════════
+//   MISC
+// ══════════════════════════════════════════
+function clearAll(){
+  if(!confirm('Delete ALL data permanently?')) return;
+  D={expenses:[],revenue:[]};
+  saveData();
+  toast('All data cleared');
+  renderPage(curPage);
+}
+
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let _tTimer;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(_tTimer);
+  _tTimer=setTimeout(()=>el.classList.remove('show'),2400);
+}
+
+// ══════════════════════════════════════════
+//   PWA SERVICE WORKER
+// ══════════════════════════════════════════
+if('serviceWorker' in navigator){
+  const sw=`
+    const CACHE='MoneyWise-v1';
+    const URLS=[];
+    self.addEventListener('install',()=>self.skipWaiting());
+    self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
+    self.addEventListener('fetch',e=>{
+      e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
+    });
+  `;
+  try{
+    const blob=new Blob([sw],{type:'application/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+  }catch(e){}
+}
+
+// ══════════════════════════════════════════
+//   BOOT
+// ══════════════════════════════════════════
+loadData();
+renderDash();
+</script>
+</body>
+</html>
